@@ -1,5 +1,10 @@
 <?php
 include 'connection.php';
+
+require 'vendor/autoload.php';
+
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 ?>
 
 <!DOCTYPE html>
@@ -35,7 +40,78 @@ include 'connection.php';
       </div>
       <div class="card-body">
         <div class="table-responsive">
-          <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
+        <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Vendor</th>
+                <th>UserName</th>
+                <th>ATM ID</th>
+                <th>Location</th>
+                <th>Start Date</th>
+                <th>ATM Monthly Visit</th>
+                <?php
+                $startDate = Carbon::now()->startOfMonth();
+                $endDate = Carbon::now()->endOfMonth();
+                $period = CarbonPeriod::create($startDate, $endDate);
+
+                foreach ($period as $date) {
+                  echo "<th>" . $date->format('l j') . "</th>";
+                }
+                ?>
+              </tr>
+            </thead>
+            <tbody>
+            <?php
+            if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
+              $date_range = explode(' - ', $_GET['date_range']);
+              $start_date = Carbon::createFromFormat('Y-m-d', $date_range[0]);
+              $end_date = Carbon::createFromFormat('Y-m-d', $date_range[1]);
+              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
+                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
+                      FROM atm 
+                      JOIN vendor ON atm.vendor_id = vendor.id 
+                      JOIN schedule ON schedule.location_id = atm.location_id 
+                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
+                      JOIN user ON agent_schedule.agent_id = user.id
+                      JOIN location ON atm.location_id = location.id 
+                      WHERE schedule.assigned_date BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
+            } else {
+              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
+                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
+                      FROM atm 
+                      JOIN vendor ON atm.vendor_id = vendor.id 
+                      JOIN schedule ON schedule.location_id = atm.location_id 
+                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
+                      JOIN user ON agent_schedule.agent_id = user.id 
+                      JOIN location ON atm.location_id = location.id";
+            }
+
+            $result = $conn->query($sql);
+            if ($result->num_rows > 0) {
+              $no = 1;
+              while($row = $result->fetch_assoc()) {
+                echo "<tr>";
+                echo "<td>" . $no++ . "</td>";
+                echo "<td>" . $row['vendor_name'] . "</td>";
+                echo "<td>" . $row['user_name'] . "</td>";
+                echo "<td>" . $row['wsid'] . "</td>";
+                echo "<td>" . $row['location_name'] . "</td>";
+                echo "<td>" . Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s') . "</td>";
+                echo "<td>" . $row['atm_monthly_visit'] . "</td>";
+                foreach ($period as $date) {
+                  $status = ($row['status'] == 0) ? 'open' : 'done';
+                  echo "<td>" . $row['day'] . " " . Carbon::parse($row['assigned_date'])->format('Y-m-d H:i:s') . " (" . $status . ")</td>";
+                }
+                echo "</tr>";
+              }
+            } else {
+              echo "<tr><td colspan='37'>Tidak ada laporan!</td></tr>";
+            }
+            ?>
+            </tbody>
+          </table>
+          <!-- <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
             <thead>
               <tr>
                 <th>Tanggal</th>
@@ -44,7 +120,7 @@ include 'connection.php';
               </tr>
             </thead>
             <tbody>
-            <?php
+            <!-- <?php
             if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
               $date_range = explode(' - ', $_GET['date_range']);
               $start_date = $date_range[0];
@@ -66,9 +142,9 @@ include 'connection.php';
             } else {
               echo "<tr><td colspan='3'>Tidak ada laporan!</td></tr>";
             }
-            ?>
+            ?> -->
             </tbody>
-          </table>
+          </table> -->
         </div>
       </div>
     </div>
