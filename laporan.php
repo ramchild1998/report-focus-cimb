@@ -1,5 +1,5 @@
 <?php
-include 'koneksi.php';
+include 'connection.php';
 ?>
 
 <h1>Laporan</h1>

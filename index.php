@@ -13,3 +13,12 @@ include 'connection.php';
   <textarea name="isi"></textarea><br><br>
   <input type="submit" value="Simpan">
 </form>
+
+<script src="js/jquery-ui.js"></script>
+<script>
+  $(document).ready(function() {
+    $("#tanggal").datepicker({
+      dateFormat: "yy-mm-dd"
+    });
+  });
+</script>
