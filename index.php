@@ -67,20 +67,64 @@ use Carbon\CarbonPeriod;
               $date_range = explode(' - ', $_GET['date_range']);
               $start_date = $date_range[0];
               $end_date = $date_range[1];
-              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, agent_schedule.effective_date, location.atm_monthly_visit 
-                      FROM atm 
-                      JOIN vendor ON atm.vendor_id = vendor.id 
-                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id
-                      JOIN user ON agent_schedule.agent_id = user.id 
-                      JOIN location ON atm.location_id = location.id 
-                      WHERE agent_schedule.effective_date BETWEEN '$start_date' AND '$end_date'";
+              $sql = "SELECT 
+                        atm.wsid AS ATM_ID,
+                        vendor.name AS Vendor,
+                        location.name AS Location,
+                        user.name AS UserName,
+                        COUNT(schedule.id) AS visit_count
+                      FROM 
+                        focus_cimb.atm
+                      LEFT JOIN 
+                        focus_cimb.vendor ON vendor.id = atm.vendor_id
+                      LEFT JOIN 
+                        focus_cimb.location ON location.id = atm.location_id
+                      INNER JOIN 
+                        focus_cimb.schedule ON schedule.location_id = atm.location_id
+                      LEFT JOIN 
+                        focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
+                      LEFT JOIN 
+                        focus_cimb.user ON user.id = agent_schedule.agent_id
+                      WHERE 
+                        location.is_active = 1 AND
+                        schedule.status = 'completed' AND
+                        schedule.effective_date BETWEEN '$start_date' AND '$end_date'
+                      GROUP BY 
+                        atm.wsid, 
+                        vendor.name, 
+                        location.name, 
+                        user.name
+                      ORDER BY 
+                        atm.wsid ASC";
             } else {
-              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, agent_schedule.effective_date, location.atm_monthly_visit 
-                      FROM atm 
-                      JOIN vendor ON atm.vendor_id = vendor.id 
-                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
-                      JOIN user ON agent_schedule.agent_id = user.id 
-                      JOIN location ON atm.location_id = location.id";
+              $sql = "SELECT 
+                        atm.wsid AS ATM_ID,
+                        vendor.name AS Vendor,
+                        location.name AS Location,
+                        user.name AS UserName,
+                        COUNT(schedule.id) AS visit_count
+                      FROM 
+                        focus_cimb.atm
+                      LEFT JOIN 
+                        focus_cimb.vendor ON vendor.id = atm.vendor_id
+                      LEFT JOIN 
+                        focus_cimb.location ON location.id = atm.location_id
+                      INNER JOIN 
+                        focus_cimb.schedule ON schedule.location_id = atm.location_id
+                      LEFT JOIN 
+                        focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
+                      LEFT JOIN 
+                        focus_cimb.user ON user.id = agent_schedule.agent_id
+                      WHERE 
+                        location.is_active = 1 AND
+                        schedule.status = 'completed'
+                      GROUP BY 
+                        atm.wsid, 
+                        vendor.name, 
+                        location.name, 
+                        user.name
+                      ORDER BY 
+                        atm.wsid ASC";
             }
 
             $result = $conn->query($sql);
@@ -89,20 +133,20 @@ use Carbon\CarbonPeriod;
               while($row = $result->fetch_assoc()) {
                 echo "<tr>";
                 echo "<td>" . $no++ . "</td>";
-                echo "<td>" . $row['vendor_name'] . "</td>";
-                echo "<td>" . $row['user_name'] . "</td>";
-                echo "<td>" . $row['wsid'] . "</td>";
-                echo "<td>" . $row['location_name'] . "</td>";
+                echo "<td>" . $row['Vendor'] . "</td>";
+                echo "<td>" . $row['UserName'] . "</td>";
+                echo "<td>" . $row['ATM_ID'] . "</td>";
+                echo "<td>" . $row['Location'] . "</td>";
                 echo "<td>" . Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s') . "</td>";
-                echo "<td>" . $row['atm_monthly_visit'] . "</td>";
+                echo "<td>" . $row['visit_count'] . "</td>";
                 
-                foreach ($period as $date) {
-                  echo "<td>" . ($row['status'] == 0 ? 'Tidak' : 'Ya') . "</td>";
-                }
+                // foreach ($period as $date) {
+                //   echo "<td>" . ($row['status'] == 0 ? 'open' : 'completed') . "</td>";
+                // }
                 echo "</tr>";
               }
             } else {
-              echo "<tr><td colspan='3'>Tidak ada laporan!</td></tr>";
+              echo "<tr><td colspan='7'>Tidak ada laporan!</td></tr>";
             }
             ?>
             </tbody>
