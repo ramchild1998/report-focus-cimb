@@ -58,50 +58,44 @@ use Carbon\CarbonPeriod;
             </thead>
             <tbody>
             <?php
-            if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
-              $date_range = explode(' - ', $_GET['date_range']);
-              $start_date = Carbon::createFromFormat('Y-m-d', $date_range[0]);
-              $end_date = Carbon::createFromFormat('Y-m-d', $date_range[1]);
-              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
-                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
-                      FROM atm 
-                      JOIN vendor ON atm.vendor_id = vendor.id 
-                      JOIN schedule ON schedule.location_id = atm.location_id 
-                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
-                      JOIN user ON agent_schedule.agent_id = user.id
-                      JOIN location ON atm.location_id = location.id 
-                      WHERE schedule.assigned_date BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
-            } else {
-              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
-                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
-                      FROM atm 
-                      JOIN vendor ON atm.vendor_id = vendor.id 
-                      JOIN schedule ON schedule.location_id = atm.location_id 
-                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
-                      JOIN user ON agent_schedule.agent_id = user.id 
-                      JOIN location ON atm.location_id = location.id";
-            }
+            // Data dummy sementara
+            $dummyData = [
+              [
+                'vendor_name' => 'Vendor A',
+                'user_name' => 'User A',
+                'wsid' => 'ATM001',
+                'location_name' => 'Location A',
+                'effective_date' => Carbon::now()->subDays(10)->format('Y-m-d H:i:s'),
+                'atm_monthly_visit' => 5,
+                'status' => 1
+              ],
+              [
+                'vendor_name' => 'Vendor B',
+                'user_name' => 'User B',
+                'wsid' => 'ATM002',
+                'location_name' => 'Location B',
+                'effective_date' => Carbon::now()->subDays(5)->format('Y-m-d H:i:s'),
+                'atm_monthly_visit' => 3,
+                'status' => 0
+              ]
+            ];
 
-            $result = $conn->query($sql);
-            if ($result->num_rows > 0) {
-              $no = 1;
-              while($row = $result->fetch_assoc()) {
-                echo "<tr>";
-                echo "<td>" . $no++ . "</td>";
-                echo "<td>" . $row['vendor_name'] . "</td>";
-                echo "<td>" . $row['user_name'] . "</td>";
-                echo "<td>" . $row['wsid'] . "</td>";
-                echo "<td>" . $row['location_name'] . "</td>";
-                echo "<td>" . Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s') . "</td>";
-                echo "<td>" . $row['atm_monthly_visit'] . "</td>";
-                foreach ($period as $date) {
-                  $status = ($row['status'] == 0) ? 0 : 1;
-                  echo "<td>" . $status . "</td>";
-                }
-                echo "</tr>";
+            $no = 1;
+            foreach ($dummyData as $row) {
+              echo "<tr>";
+              echo "<td>" . $no++ . "</td>";
+              echo "<td>" . $row['vendor_name'] . "</td>";
+              echo "<td>" . $row['user_name'] . "</td>";
+              echo "<td>" . $row['wsid'] . "</td>";
+              echo "<td>" . $row['location_name'] . "</td>";
+              echo "<td>" . $row['effective_date'] . "</td>";
+              echo "<td>" . $row['atm_monthly_visit'] . "</td>";
+              $status = 0;
+              foreach ($period as $date) {
+                echo "<td>" . $status . "</td>";
+                $status = ($status == 0) ? 1 : 0;
               }
-            } else {
-              echo "<tr><td colspan='37'>Tidak ada laporan!</td></tr>";
+              echo "</tr>";
             }
             ?>
             </tbody>

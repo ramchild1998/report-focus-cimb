@@ -28,51 +28,41 @@ foreach ($period as $date) {
     $col++;
 }
 
-if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
-    $date_range = explode(' - ', $_GET['date_range']);
-    $start_date = Carbon::createFromFormat('Y-m-d', $date_range[0]);
-    $end_date = Carbon::createFromFormat('Y-m-d', $date_range[1]);
-    $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
-            agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
-            FROM atm 
-            JOIN vendor ON atm.vendor_id = vendor.id 
-            JOIN schedule ON schedule.location_id = atm.location_id 
-            JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
-            JOIN user ON agent_schedule.agent_id = user.id
-            JOIN location ON atm.location_id = location.id 
-            WHERE schedule.assigned_date BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
-} else {
-    $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
-            agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
-            FROM atm 
-            JOIN vendor ON atm.vendor_id = vendor.id 
-            JOIN schedule ON schedule.location_id = atm.location_id 
-            JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
-            JOIN user ON agent_schedule.agent_id = user.id 
-            JOIN location ON atm.location_id = location.id";
-}
+// Dummy data
+$data = [
+    [
+        'wsid' => 'ATM001',
+        'vendor_name' => 'Vendor A',
+        'user_name' => 'User A',
+        'location_name' => 'Location A',
+        'effective_date' => '2023-10-01 08:00:00',
+        'atm_monthly_visit' => 5,
+        'assigned_date' => '2023-10-01 08:00:00',
+        'day' => 'Monday',
+        'status' => 0
+    ],
+    // Tambahkan data dummy lainnya sesuai kebutuhan
+];
 
-$result = $conn->query($sql);
-if ($result->num_rows > 0) {
-    $rowNum = 2;
-    $no = 1;
-    while($row = $result->fetch_assoc()) {
-        $sheet->setCellValue('A' . $rowNum, $no++);
-        $sheet->setCellValue('B' . $rowNum, $row['vendor_name']);
-        $sheet->setCellValue('C' . $rowNum, $row['user_name']);
-        $sheet->setCellValue('D' . $rowNum, $row['wsid']);
-        $sheet->setCellValue('E' . $rowNum, $row['location_name']);
-        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s'));
-        $sheet->setCellValue('G' . $rowNum, $row['atm_monthly_visit']);
-        
-        $col = 'H';
-        foreach ($period as $date) {
-            $status = ($row['status'] == 0) ? 'open' : 'done';
-            $sheet->setCellValue($col . $rowNum, $row['day'] . " " . Carbon::parse($row['assigned_date'])->format('Y-m-d H:i:s') . " (" . $status . ")");
-            $col++;
-        }
-        $rowNum++;
+$rowNum = 2;
+$no = 1;
+foreach ($data as $row) {
+    $sheet->setCellValue('A' . $rowNum, $no++);
+    $sheet->setCellValue('B' . $rowNum, $row['vendor_name']);
+    $sheet->setCellValue('C' . $rowNum, $row['user_name']);
+    $sheet->setCellValue('D' . $rowNum, $row['wsid']);
+    $sheet->setCellValue('E' . $rowNum, $row['location_name']);
+    $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s'));
+    $sheet->setCellValue('G' . $rowNum, $row['atm_monthly_visit']);
+    
+    $col = 'H';
+    $status = 0;
+    foreach ($period as $date) {
+        $sheet->setCellValue($col . $rowNum, $status);
+        $status = ($status == 0) ? 1 : 0;
+        $col++;
     }
+    $rowNum++;
 }
 
 $writer = new Xlsx($spreadsheet);
