@@ -31,10 +31,11 @@ use Carbon\CarbonPeriod;
             data-bs-toggle="tooltip" data-bs-title="Pilih rentang tanggal untuk laporan" />
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
+        <a href="export.php?<?php echo $_SERVER['QUERY_STRING']; ?>" class="btn btn-success">Export to Excel</a>
       </div>
       <div class="card-body">
         <div class="table-responsive">
-          <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
+        <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
             <thead>
               <tr>
                 <th>No</th>
@@ -61,9 +62,24 @@ use Carbon\CarbonPeriod;
               $date_range = explode(' - ', $_GET['date_range']);
               $start_date = Carbon::createFromFormat('Y-m-d', $date_range[0]);
               $end_date = Carbon::createFromFormat('Y-m-d', $date_range[1]);
-              $sql = "SELECT * FROM laporan WHERE tanggal BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
+              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
+                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
+                      FROM atm 
+                      JOIN vendor ON atm.vendor_id = vendor.id 
+                      JOIN schedule ON schedule.location_id = atm.location_id 
+                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
+                      JOIN user ON agent_schedule.agent_id = user.id
+                      JOIN location ON atm.location_id = location.id 
+                      WHERE schedule.assigned_date BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
             } else {
-              $sql = "SELECT * FROM laporan";
+              $sql = "SELECT atm.wsid, vendor.name as vendor_name, user.name as user_name, location.name as location_name, 
+                      agent_schedule.effective_date, location.atm_monthly_visit, schedule.assigned_date, schedule.day, schedule.status 
+                      FROM atm 
+                      JOIN vendor ON atm.vendor_id = vendor.id 
+                      JOIN schedule ON schedule.location_id = atm.location_id 
+                      JOIN agent_schedule ON schedule.agent_schedule_id = agent_schedule.id 
+                      JOIN user ON agent_schedule.agent_id = user.id 
+                      JOIN location ON atm.location_id = location.id";
             }
 
             $result = $conn->query($sql);
@@ -72,14 +88,15 @@ use Carbon\CarbonPeriod;
               while($row = $result->fetch_assoc()) {
                 echo "<tr>";
                 echo "<td>" . $no++ . "</td>";
-                echo "<td>Vendor</td>";
-                echo "<td>UserName</td>";
-                echo "<td>ATM ID</td>";
-                echo "<td>Location</td>";
-                echo "<td>" . Carbon::createFromFormat('Y-m-d', $row['tanggal'])->format('Y-m-d') . "</td>";
-                echo "<td>ATM Monthly Visit</td>";
+                echo "<td>" . $row['vendor_name'] . "</td>";
+                echo "<td>" . $row['user_name'] . "</td>";
+                echo "<td>" . $row['wsid'] . "</td>";
+                echo "<td>" . $row['location_name'] . "</td>";
+                echo "<td>" . Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s') . "</td>";
+                echo "<td>" . $row['atm_monthly_visit'] . "</td>";
                 foreach ($period as $date) {
-                  echo "<td></td>";
+                  $status = ($row['status'] == 0) ? 0 : 1;
+                  echo "<td>" . $status . "</td>";
                 }
                 echo "</tr>";
               }
