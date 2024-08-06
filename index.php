@@ -19,7 +19,7 @@ include 'connection.php';
 
 <body>
 
-  <div class="container-xl px-4 mt-n10">
+  <div class="container-xl px-4 mt-4">
     <div class="card mb-4">
       <div class="card-header d-flex flex-wrap align-items-center justify-content-between mb-1">Laporan
         <form action="index.php" class="d-inline-flex gap-2 mb-sm-0 mb-1" method="GET">
@@ -28,46 +28,43 @@ include 'connection.php';
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
       </div>
-    </div>
-  </div>
-
-  <div class="container">
-    <div class="row">
-      <div class="col">
-        <table id="laporanTable" class="display" style="width:100%">
-          <thead>
-            <tr>
-              <th>Tanggal</th>
-              <th>Judul</th>
-              <th>Isi Laporan</th>
-            </tr>
-          </thead>
-          <tbody>
-          <?php
-          if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
-            $date_range = explode(' - ', $_GET['date_range']);
-            $start_date = $date_range[0];
-            $end_date = $date_range[1];
-            $sql = "SELECT * FROM laporan WHERE tanggal BETWEEN '$start_date' AND '$end_date'";
-          } else {
-            $sql = "SELECT * FROM laporan";
-          }
-
-          $result = $conn->query($sql);
-          if ($result->num_rows > 0) {
-            while($row = $result->fetch_assoc()) {
-              echo "<tr>";
-              echo "<td>" . $row['tanggal'] . "</td>";
-              echo "<td>" . $row['judul'] . "</td>";
-              echo "<td>" . $row['isi'] . "</td>";
-              echo "</tr>";
+      <div class="card-body">
+        <div class="table-responsive">
+          <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Judul</th>
+                <th>Isi Laporan</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php
+            if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
+              $date_range = explode(' - ', $_GET['date_range']);
+              $start_date = $date_range[0];
+              $end_date = $date_range[1];
+              $sql = "SELECT * FROM laporan WHERE tanggal BETWEEN '$start_date' AND '$end_date'";
+            } else {
+              $sql = "SELECT * FROM laporan";
             }
-          } else {
-            echo "<tr><td colspan='3'>Tidak ada laporan!</td></tr>";
-          }
-          ?>
-          </tbody>
-        </table>
+
+            $result = $conn->query($sql);
+            if ($result->num_rows > 0) {
+              while($row = $result->fetch_assoc()) {
+                echo "<tr>";
+                echo "<td>" . $row['tanggal'] . "</td>";
+                echo "<td>" . $row['judul'] . "</td>";
+                echo "<td>" . $row['isi'] . "</td>";
+                echo "</tr>";
+              }
+            } else {
+              echo "<tr><td colspan='3'>Tidak ada laporan!</td></tr>";
+            }
+            ?>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
