@@ -1,5 +1,9 @@
 <?php
 include 'connection.php';
+require 'vendor/autoload.php';
+
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 ?>
 
 <!DOCTYPE html>
@@ -33,33 +37,54 @@ include 'connection.php';
           <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
             <thead>
               <tr>
-                <th>Tanggal</th>
-                <th>Judul</th>
-                <th>Isi Laporan</th>
+                <th>No</th>
+                <th>Vendor</th>
+                <th>UserName</th>
+                <th>ATM ID</th>
+                <th>Location</th>
+                <th>Start Date</th>
+                <th>ATM Monthly Visit</th>
+                <?php
+                $startDate = Carbon::now()->startOfMonth();
+                $endDate = Carbon::now()->endOfMonth();
+                $period = CarbonPeriod::create($startDate, $endDate);
+
+                foreach ($period as $date) {
+                  echo "<th>" . $date->format('l j') . "</th>";
+                }
+                ?>
               </tr>
             </thead>
             <tbody>
             <?php
             if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
               $date_range = explode(' - ', $_GET['date_range']);
-              $start_date = $date_range[0];
-              $end_date = $date_range[1];
-              $sql = "SELECT * FROM laporan WHERE tanggal BETWEEN '$start_date' AND '$end_date'";
+              $start_date = Carbon::createFromFormat('Y-m-d', $date_range[0]);
+              $end_date = Carbon::createFromFormat('Y-m-d', $date_range[1]);
+              $sql = "SELECT * FROM laporan WHERE tanggal BETWEEN '" . $start_date->format('Y-m-d') . "' AND '" . $end_date->format('Y-m-d') . "'";
             } else {
               $sql = "SELECT * FROM laporan";
             }
 
             $result = $conn->query($sql);
             if ($result->num_rows > 0) {
+              $no = 1;
               while($row = $result->fetch_assoc()) {
                 echo "<tr>";
-                echo "<td>" . $row['tanggal'] . "</td>";
-                echo "<td>" . $row['judul'] . "</td>";
-                echo "<td>" . $row['isi'] . "</td>";
+                echo "<td>" . $no++ . "</td>";
+                echo "<td>Vendor</td>";
+                echo "<td>UserName</td>";
+                echo "<td>ATM ID</td>";
+                echo "<td>Location</td>";
+                echo "<td>" . Carbon::createFromFormat('Y-m-d', $row['tanggal'])->format('Y-m-d') . "</td>";
+                echo "<td>ATM Monthly Visit</td>";
+                foreach ($period as $date) {
+                  echo "<td></td>";
+                }
                 echo "</tr>";
               }
             } else {
-              echo "<tr><td colspan='3'>Tidak ada laporan!</td></tr>";
+              echo "<tr><td colspan='37'>Tidak ada laporan!</td></tr>";
             }
             ?>
             </tbody>
