@@ -88,7 +88,7 @@ use Carbon\CarbonPeriod;
                       WHERE 
                         location.is_active = 1 AND
                         schedule.status = 'completed' AND
-                        schedule.effective_date BETWEEN '$start_date' AND '$end_date'
+                        agent_schedule.effective_date BETWEEN '$start_date' AND '$end_date'
                       GROUP BY 
                         atm.wsid, 
                         vendor.name, 
@@ -109,7 +109,7 @@ use Carbon\CarbonPeriod;
                         focus_cimb.vendor ON vendor.id = atm.vendor_id
                       LEFT JOIN 
                         focus_cimb.location ON location.id = atm.location_id
-                      INNER JOIN 
+                      INNER JOIN
                         focus_cimb.schedule ON schedule.location_id = atm.location_id
                       LEFT JOIN 
                         focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
@@ -137,13 +137,13 @@ use Carbon\CarbonPeriod;
                 echo "<td>" . $row['UserName'] . "</td>";
                 echo "<td>" . $row['ATM_ID'] . "</td>";
                 echo "<td>" . $row['Location'] . "</td>";
-                echo "<td>" . Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s') . "</td>";
+                echo "<td>" . (isset($row['effective_date']) ? $row['effective_date'] : '') . "</td>";
                 echo "<td>" . $row['visit_count'] . "</td>";
                 
                 // foreach ($period as $date) {
-                //   echo "<td>" . ($row['status'] == 0 ? 'open' : 'completed') . "</td>";
+                //   echo "<td>" . ($row['status'] == 0 ? 'Tidak' : 'Ya') . "</td>";
                 // }
-                echo "</tr>";
+                // echo "</tr>";
               }
             } else {
               echo "<tr><td colspan='7'>Tidak ada laporan!</td></tr>";
