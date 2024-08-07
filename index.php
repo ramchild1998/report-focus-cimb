@@ -15,8 +15,8 @@ use Carbon\CarbonPeriod;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"
     crossorigin="anonymous"></script>
   <title>REPORT FOCUS CIMB NIAGA</title>
@@ -51,10 +51,21 @@ use Carbon\CarbonPeriod;
             }
             ?>
           </select>
+          <select class="form-control ps-0 mb-1" name="year" id="yearpicker" data-bs-toggle="tooltip" data-bs-title="Pilih tahun untuk laporan">
+            <?php
+            $currentYear = Carbon::now()->year;
+            $selectedYear = isset($_GET['year']) ? $_GET['year'] : $currentYear;
+            for ($year = $currentYear; $year >= $currentYear - 2; $year--) {
+              $selected = ($year == $selectedYear) ? 'selected' : '';
+              echo "<option value='$year' $selected>$year</option>";
+            }
+            ?>
+          </select>
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
         <form action="export.php" method="POST">
           <input type="hidden" name="month" value="<?php echo isset($selectedMonth) ? $selectedMonth : ''; ?>">
+          <input type="hidden" name="year" value="<?php echo isset($selectedYear) ? $selectedYear : ''; ?>">
           <button type="submit" class="btn btn-success">Export to Excel</button>
         </form>
       </div>
@@ -71,10 +82,14 @@ use Carbon\CarbonPeriod;
                 <th>Start Date</th>
                 <th>ATM Monthly Visit</th>
                 <?php
-                $period = CarbonPeriod::create(Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth());
+                $selectedMonth = isset($_GET['month']) ? $_GET['month'] : Carbon::now()->format('m');
+                $selectedYear = isset($_GET['year']) ? $_GET['year'] : Carbon::now()->year;
+                $startOfMonth = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth();
+                $endOfMonth = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->endOfMonth();
+                $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
 
-                foreach ($period as $month) {
-                  echo "<th>" . $month->format('l j') . "</th>";
+                foreach ($period as $date) {
+                  echo "<th>" . $date->format('l j') . "</th>";
                 }
                 ?>
                 <th> Type Visit </th>
@@ -82,9 +97,10 @@ use Carbon\CarbonPeriod;
             </thead>
             <tbody>
             <?php
-            if (isset($_GET['month']) && !empty($_GET['month'])) {
+            if (isset($_GET['month']) && !empty($_GET['month']) && isset($_GET['year']) && !empty($_GET['year'])) {
               $month = $_GET['month'];
-              $start_month = Carbon::now()->year . '-' . $month . '-01';
+              $year = $_GET['year'];
+              $start_month = $year . '-' . $month . '-01';
               $end_month = Carbon::parse($start_month)->endOfMonth()->toDateString();
               $sql = "SELECT 
                         atm.wsid AS ATM_ID,
@@ -324,6 +340,7 @@ use Carbon\CarbonPeriod;
   <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     $(document).ready(function() {
       $('#laporanTable').DataTable({
