@@ -131,6 +131,22 @@ use Carbon\CarbonPeriod;
             if ($result->num_rows > 0) {
               $no = 1;
               while($row = $result->fetch_assoc()) {
+                $sqlRow = "SELECT 
+                          schedule.assigned_date
+                          FROM 
+                          focus_cimb.atm
+                          LEFT JOIN 
+                          focus_cimb.location ON location.id = atm.location_id
+                          INNER JOIN 
+                          focus_cimb.schedule ON schedule.location_id = atm.location_id
+                          WHERE 
+                          location.is_active = 1 AND
+                          schedule.status = 'completed' AND
+                          atm.wsid= '". $row['ATM_ID'] ."'
+                          ORDER BY 
+                          atm.wsid ASC,
+                          schedule.assigned_date ASC;";
+                $resultRow = $conn->query($sqlRow);
                 echo "<tr>";
                 echo "<td>" . $no++ . "</td>";
                 echo "<td>" . $row['Vendor'] . "</td>";
@@ -139,11 +155,21 @@ use Carbon\CarbonPeriod;
                 echo "<td>" . $row['Location'] . "</td>";
                 echo "<td>" . (isset($row['effective_date']) ? $row['effective_date'] : '') . "</td>";
                 echo "<td>" . $row['visit_count'] . "</td>";
-                
-                // foreach ($period as $date) {
-                //   echo "<td>" . ($row['status'] == 0 ? 'Tidak' : 'Ya') . "</td>";
-                // }
-                // echo "</tr>";
+                $dateIterator = [];
+                while ($iterator = $resultRow->fetch_assoc()) {
+                    $dateIterator[] = $iterator;
+                }
+                foreach ($period as $date) {
+                    foreach($dateIterator as $dateIteration){
+                        $date2 = Carbon::parse($dateIteration['assigned_date']);
+                        if($date->eq($date2)){
+                            echo "<td>1</td>";
+                            continue 2;
+                        }
+                    }
+                    echo "<td>0</td>";
+                }
+                 echo "</tr>";
               }
             } else {
               echo "<tr><td colspan='7'>Tidak ada laporan!</td></tr>";
