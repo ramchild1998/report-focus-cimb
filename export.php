@@ -28,41 +28,121 @@ foreach ($period as $date) {
     $col++;
 }
 
-// Dummy data
-$data = [
-    [
-        'wsid' => 'ATM001',
-        'vendor_name' => 'Vendor A',
-        'user_name' => 'User A',
-        'location_name' => 'Location A',
-        'effective_date' => '2023-10-01 08:00:00',
-        'atm_monthly_visit' => 5,
-        'assigned_date' => '2023-10-01 08:00:00',
-        'day' => 'Monday',
-        'status' => 0
-    ],
-    // Tambahkan data dummy lainnya sesuai kebutuhan
-];
+if (isset($_POST['start_date']) && isset($_POST['end_date']) && !empty($_POST['start_date']) && !empty($_POST['end_date'])) {
+    $start_date = $_POST['start_date'];
+    $end_date = $_POST['end_date'];
+    $sql = "SELECT 
+              atm.wsid AS ATM_ID,
+              vendor.name AS Vendor,
+              location.name AS Location,
+              user.name AS UserName,
+              agent_schedule.effective_date AS Start_Date,
+              COUNT(schedule.id) AS visit_count
+            FROM 
+              focus_cimb.atm
+            LEFT JOIN 
+              focus_cimb.vendor ON vendor.id = atm.vendor_id
+            LEFT JOIN 
+              focus_cimb.location ON location.id = atm.location_id
+            INNER JOIN 
+              focus_cimb.schedule ON schedule.location_id = atm.location_id
+            LEFT JOIN 
+              focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
+            LEFT JOIN 
+              focus_cimb.user ON user.id = agent_schedule.agent_id
+            WHERE 
+              location.is_active = 1 AND
+              schedule.status = 'completed' AND
+              agent_schedule.effective_date BETWEEN '$start_date' AND '$end_date'
+            GROUP BY 
+              atm.wsid, 
+              vendor.name, 
+              location.name, 
+              user.name,
+              agent_schedule.effective_date
+            ORDER BY 
+              atm.wsid ASC";
+} else {
+    $sql = "SELECT 
+              atm.wsid AS ATM_ID,
+              vendor.name AS Vendor,
+              location.name AS Location,
+              user.name AS UserName,
+              agent_schedule.effective_date AS Start_Date,
+              COUNT(schedule.id) AS visit_count
+            FROM 
+              focus_cimb.atm
+            LEFT JOIN 
+              focus_cimb.vendor ON vendor.id = atm.vendor_id
+            LEFT JOIN 
+              focus_cimb.location ON location.id = atm.location_id
+            INNER JOIN
+              focus_cimb.schedule ON schedule.location_id = atm.location_id
+            LEFT JOIN 
+              focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
+            LEFT JOIN 
+              focus_cimb.user ON user.id = agent_schedule.agent_id
+            WHERE 
+              location.is_active = 1 AND
+              schedule.status = 'completed'
+            GROUP BY 
+              atm.wsid, 
+              vendor.name, 
+              location.name, 
+              user.name,
+              agent_schedule.effective_date
+            ORDER BY 
+              atm.wsid ASC";
+}
 
+$result = $conn->query($sql);
 $rowNum = 2;
 $no = 1;
-foreach ($data as $row) {
-    $sheet->setCellValue('A' . $rowNum, $no++);
-    $sheet->setCellValue('B' . $rowNum, $row['vendor_name']);
-    $sheet->setCellValue('C' . $rowNum, $row['user_name']);
-    $sheet->setCellValue('D' . $rowNum, $row['wsid']);
-    $sheet->setCellValue('E' . $rowNum, $row['location_name']);
-    $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['effective_date'])->format('Y-m-d H:i:s'));
-    $sheet->setCellValue('G' . $rowNum, $row['atm_monthly_visit']);
-    
-    $col = 'H';
-    $status = 0;
-    foreach ($period as $date) {
-        $sheet->setCellValue($col . $rowNum, $status);
-        $status = ($status == 0) ? 1 : 0;
-        $col++;
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $sheet->setCellValue('A' . $rowNum, $no++);
+        $sheet->setCellValue('B' . $rowNum, $row['Vendor']);
+        $sheet->setCellValue('C' . $rowNum, $row['UserName']);
+        $sheet->setCellValue('D' . $rowNum, $row['ATM_ID']);
+        $sheet->setCellValue('E' . $rowNum, $row['Location']);
+        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d H:i:s'));
+        $sheet->setCellValue('G' . $rowNum, $row['visit_count']);
+        
+        $sqlRow = "SELECT 
+                    schedule.assigned_date
+                    FROM 
+                    focus_cimb.atm
+                    LEFT JOIN 
+                    focus_cimb.location ON location.id = atm.location_id
+                    INNER JOIN 
+                    focus_cimb.schedule ON schedule.location_id = atm.location_id
+                    WHERE 
+                    location.is_active = 1 AND
+                    schedule.status = 'completed' AND
+                    atm.wsid= '". $row['ATM_ID'] ."'
+                    ORDER BY 
+                    atm.wsid ASC,
+                    schedule.assigned_date ASC;";
+        $resultRow = $conn->query($sqlRow);
+        $dateIterator = [];
+        while ($iterator = $resultRow->fetch_assoc()) {
+            $dateIterator[] = $iterator;
+        }
+        $col = 'H';
+        foreach ($period as $date) {
+            $status = 0;
+            foreach($dateIterator as $dateIteration){
+                $date2 = Carbon::parse($dateIteration['assigned_date']);
+                if($date->eq($date2)){
+                    $status = 1;
+                    break;
+                }
+            }
+            $sheet->setCellValue($col . $rowNum, $status);
+            $col++;
+        }
+        $rowNum++;
     }
-    $rowNum++;
 }
 
 $writer = new Xlsx($spreadsheet);
