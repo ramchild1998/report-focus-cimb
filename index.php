@@ -26,10 +26,31 @@ use Carbon\CarbonPeriod;
 
   <div class="container-xl px-4 mt-4">
     <div class="card mb-4">
-      <div class="card-header d-flex flex-wrap align-items-center justify-content-between mb-1">Laporan
+      <div class="card-header d-flex flex-wrap align-items-center justify-content-between mb-1"><b>REPORT FOCUS</b>
         <form action="index.php" class="d-inline-flex gap-2 mb-sm-0 mb-1" method="GET">
-          <input class="form-control ps-0 mb-1" name="date_range" id="datepicker" placeholder="Select date range..."
-            data-bs-toggle="tooltip" data-bs-title="Pilih rentang tanggal untuk laporan" />
+          <select class="form-control ps-0 mb-1" name="month" id="monthpicker" data-bs-toggle="tooltip" data-bs-title="Pilih bulan untuk laporan">
+            <?php
+            $months = [
+              '01' => 'Januari',
+              '02' => 'Februari',
+              '03' => 'Maret',
+              '04' => 'April',
+              '05' => 'Mei',
+              '06' => 'Juni',
+              '07' => 'Juli',
+              '08' => 'Agustus',
+              '09' => 'September',
+              '10' => 'Oktober',
+              '11' => 'November',
+              '12' => 'Desember'
+            ];
+            $currentMonth = Carbon::now()->format('m');
+            foreach ($months as $num => $name) {
+              $selected = ($num == $currentMonth) ? 'selected' : '';
+              echo "<option value='$num' $selected>$name</option>";
+            }
+            ?>
+          </select>
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
         <form action="export.php" method="POST">
@@ -64,10 +85,10 @@ use Carbon\CarbonPeriod;
             </thead>
             <tbody>
             <?php
-            if (isset($_GET['date_range']) && !empty($_GET['date_range'])) {
-              $date_range = explode(' - ', $_GET['date_range']);
-              $start_date = $date_range[0];
-              $end_date = $date_range[1];
+            if (isset($_GET['month']) && !empty($_GET['month'])) {
+              $month = $_GET['month'];
+              $start_date = Carbon::now()->year . '-' . $month . '-01';
+              $end_date = Carbon::parse($start_date)->endOfMonth()->toDateString();
               $sql = "SELECT 
                         atm.wsid AS ATM_ID,
                         vendor.name AS Vendor,
@@ -193,9 +214,10 @@ use Carbon\CarbonPeriod;
             }
 
             $result = $conn->query($sql);
+            $no = 1;
             $resultUnscheduled = $conn->query($sqlUnscheduled);
             if ($result->num_rows > 0) {
-              $no = 1;
+             
               while($row = $result->fetch_assoc()) {
                 $sqlRow = "SELECT 
                           schedule.assigned_date
@@ -240,7 +262,7 @@ use Carbon\CarbonPeriod;
               }
             }
             if ($resultUnscheduled->num_rows > 0) {
-              $no = 1;
+        
               while($row = $resultUnscheduled->fetch_assoc()) {
                 $sqlRow = "SELECT 
                           unscheduled_visit.assigned_date
@@ -303,25 +325,10 @@ use Carbon\CarbonPeriod;
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
   <script>
-    const litepickerRangePluginReport = document.getElementById('datepicker');
-    if (litepickerRangePluginReport) {
-      new Litepicker({
-        element: litepickerRangePluginReport,
-        singleMode: false,
-        numberOfMonths: 2,
-        numberOfColumns: 2,
-        format: 'YYYY-MM-DD',
-        plugins: ['ranges'],
-        setup: (picker) => {
-          picker.on('selected', (date1, date2) => {
-            document.dispatchEvent(new CustomEvent('dateRangeChanged'))
-          })
-        }
-      });
-    }
-
     $(document).ready(function() {
-      $('#laporanTable').DataTable();
+      $('#laporanTable').DataTable({
+        "order": [[ -1, "asc" ]]
+      });
     });
   </script>
 
