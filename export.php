@@ -6,9 +6,47 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
+
+$headerStyleArray = [
+    'borders' => [
+        'allBorders' => [
+            'borderStyle' => Border::BORDER_THIN,
+        ],
+    ],
+    'font' => [
+        'bold' => true,
+        'color' => ['argb' => 'FFFFFFFF'],
+    ],
+    'alignment' => [
+        'horizontal' => Alignment::HORIZONTAL_CENTER,
+        'vertical' => Alignment::VERTICAL_CENTER,
+    ],
+    'fill' => [
+        'fillType' => Fill::FILL_SOLID,
+        'startColor' => [
+            'argb' => 'FF4CAF50',
+        ],
+    ],
+];
+
+$bodyStyleArray = [
+    'borders' => [
+        'allBorders' => [
+            'borderStyle' => Border::BORDER_THIN,
+        ],
+    ],
+    'alignment' => [
+        'horizontal' => Alignment::HORIZONTAL_CENTER,
+        'vertical' => Alignment::VERTICAL_CENTER,
+    ],
+];
 
 $sheet->setCellValue('A1', 'No');
 $sheet->setCellValue('B1', 'Vendor');
@@ -22,11 +60,14 @@ $startDate = Carbon::now()->startOfMonth();
 $endDate = Carbon::now()->endOfMonth();
 $period = CarbonPeriod::create($startDate, $endDate);
 
-$col = 'H';
+$col = 'G';
 foreach ($period as $date) {
-    $sheet->setCellValue($col . '1', $date->format('l j'));
     $col++;
+    $sheet->setCellValue($col . '1', $date->format('l j'));
 }
+
+$sheet->getStyle('A1:' . $col . '1')->applyFromArray($headerStyleArray);
+$sheet->setAutoFilter('A1:' . $col . '1');
 
 if (isset($_POST['start_date']) && isset($_POST['end_date']) && !empty($_POST['start_date']) && !empty($_POST['end_date'])) {
     $start_date = $_POST['start_date'];
@@ -105,9 +146,11 @@ if ($result->num_rows > 0) {
         $sheet->setCellValue('C' . $rowNum, $row['UserName']);
         $sheet->setCellValue('D' . $rowNum, $row['ATM_ID']);
         $sheet->setCellValue('E' . $rowNum, $row['Location']);
-        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d H:i:s'));
+        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d'));
         $sheet->setCellValue('G' . $rowNum, $row['visit_count']);
         
+        $sheet->getStyle('A' . $rowNum . ':G' . $rowNum)->applyFromArray($bodyStyleArray);
+
         $sqlRow = "SELECT 
                     schedule.assigned_date
                     FROM 
@@ -139,14 +182,21 @@ if ($result->num_rows > 0) {
                 }
             }
             $sheet->setCellValue($col . $rowNum, $status);
+            $sheet->getStyle($col . $rowNum)->applyFromArray($bodyStyleArray);
+            $sheet->getStyle($col . $rowNum)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $col++;
         }
         $rowNum++;
     }
 }
 
+// Set column width to auto size based on content
+foreach ($sheet->getColumnIterator() as $column) {
+    $sheet->getColumnDimension($column->getColumnIndex())->setAutoSize(true);
+}
+
 $writer = new Xlsx($spreadsheet);
-$filename = 'Laporan_' . date('Ymd_His') . '.xlsx';
+$filename = 'focus_cimb_' . date('Ymd_His') . '.xlsx';
 
 // Clear output buffer to prevent any additional output
 if (ob_get_length()) {
@@ -156,7 +206,6 @@ if (ob_get_length()) {
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 header('Content-Disposition: attachment;filename="' . $filename . '"');
 header('Cache-Control: max-age=0');
-header('Cache-Control: max-age=1');
 header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
 header('Cache-Control: cache, must-revalidate');
