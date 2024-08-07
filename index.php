@@ -345,7 +345,7 @@ use Carbon\CarbonPeriod;
   <script>
     $(document).ready(function() {
       $('#laporanTable').DataTable({
-        "order": [[ -1, "asc" ]]
+        "order": [[ $('th').length - 1, "asc" ]]
       });
     });
   </script>
