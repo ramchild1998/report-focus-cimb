@@ -99,6 +99,32 @@ use Carbon\CarbonPeriod;
                         agent_schedule.effective_date
                       ORDER BY 
                         atm.wsid ASC";
+              $sqlUnscheduled = "
+                      SELECT 
+                          atm.wsid AS ATM_ID,
+                          vendor.name AS Vendor,
+                          location.name AS Location,
+                          user.name AS UserName,
+                          COUNT(unscheduled_visit.id) AS visit_count
+                      FROM 
+                          focus_cimb.atm
+                      LEFT JOIN 
+                          focus_cimb.vendor ON vendor.id = atm.vendor_id
+                      LEFT JOIN 
+                          focus_cimb.location ON location.id = atm.location_id
+                      JOIN 
+                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+                      LEFT JOIN 
+                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
+                      WHERE 
+                          unscheduled_visit.status = 'completed'
+                      GROUP BY 
+                          atm.wsid, 
+                          vendor.name, 
+                          location.name, 
+                          user.name
+                      ORDER BY 
+                          atm.wsid ASC;";
             } else {
               $sql = "SELECT 
                         atm.wsid AS ATM_ID,
@@ -130,9 +156,40 @@ use Carbon\CarbonPeriod;
                         agent_schedule.effective_date
                       ORDER BY 
                         atm.wsid ASC";
+              $sqlUnscheduled = "
+                      SELECT 
+                          atm.wsid AS ATM_ID,
+                          vendor.name AS Vendor,
+                          location.name AS Location,
+                          user.name AS UserName,
+                          user.id AS agent_id,
+                          location.id AS location_id,
+                          COUNT(unscheduled_visit.id) AS visit_count
+                      FROM 
+                          focus_cimb.atm
+                      LEFT JOIN 
+                          focus_cimb.vendor ON vendor.id = atm.vendor_id
+                      LEFT JOIN 
+                          focus_cimb.location ON location.id = atm.location_id
+                      JOIN 
+                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+                      LEFT JOIN 
+                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
+                      WHERE 
+                          unscheduled_visit.status = 'completed'
+                      GROUP BY 
+                          atm.wsid, 
+                          vendor.name, 
+                          location.name, 
+                          user.name,
+                          user.id,
+                          location.id
+                      ORDER BY 
+                          atm.wsid ASC;";
             }
 
             $result = $conn->query($sql);
+            $resultUnscheduled = $conn->query($sqlUnscheduled);
             if ($result->num_rows > 0) {
               $no = 1;
               while($row = $result->fetch_assoc()) {
@@ -177,7 +234,57 @@ use Carbon\CarbonPeriod;
                  echo "<td> Scheduled </td>";
                  echo "</tr>";
               }
-            } else {
+            }
+            if ($resultUnscheduled->num_rows > 0) {
+              $no = 1;
+              while($row = $resultUnscheduled->fetch_assoc()) {
+                $sqlRow = "SELECT 
+                          unscheduled_visit.assigned_date
+                          FROM 
+                          focus_cimb.atm
+                          LEFT JOIN 
+                          focus_cimb.location ON location.id = atm.location_id
+                          INNER JOIN 
+                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+                          LEFT JOIN 
+                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
+                          WHERE 
+                          location.is_active = 1 AND
+                          unscheduled_visit.status = 'completed' AND
+                          atm.wsid= '". $row['ATM_ID'] ."' AND
+                          user.id= '". $row['agent_id'] ."' AND
+                          location.id= '". $row['location_id'] ."'
+                          ORDER BY 
+                          atm.wsid ASC,
+                          unscheduled_visit.assigned_date ASC;";
+                $resultRow = $conn->query($sqlRow);
+                echo "<tr>";
+                echo "<td>" . $no++ . "</td>";
+                echo "<td>" . $row['Vendor'] . "</td>";
+                echo "<td>" . $row['UserName'] . "</td>";
+                echo "<td>" . $row['ATM_ID'] . "</td>";
+                echo "<td>" . $row['Location'] . "</td>";
+                echo "<td>" . (isset($row['effective_date']) ? $row['effective_date'] : '' ) . "</td>";
+                echo "<td>" . $row['visit_count'] . "</td>";
+                $dateIterator = [];
+                while ($iterator = $resultRow->fetch_assoc()) {
+                    $dateIterator[] = $iterator;
+                }
+                foreach ($period as $date) {
+                    foreach($dateIterator as $dateIteration){
+                        $date2 = Carbon::parse($dateIteration['assigned_date']);
+                        if($date->eq($date2)){
+                            echo "<td>1</td>";
+                            continue 2;
+                        }
+                    }
+                    echo "<td>0</td>";
+                }
+                 echo "<td> Unscheduled </td>";
+                 echo "</tr>";
+              }
+            }
+            if ($resultUnscheduled->num_rows < 1 && $result->num_rows < 1) {
               echo "<tr><td colspan='7'>Tidak ada laporan!</td></tr>";
             }
             ?>
