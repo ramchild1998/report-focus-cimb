@@ -101,7 +101,8 @@ use Carbon\CarbonPeriod;
               $month = $_GET['month'];
               $year = $_GET['year'];
               $start_month = $year . '-' . $month . '-01';
-              $end_month = Carbon::parse($start_month)->endOfMonth()->toDateString();
+              $end_month = Carbon::parse($start_month)->endOfMonth()->endOfDay()->format('Y-m-d H:i:s');
+              $start_month = Carbon::parse($start_month)->startOfDay()->format('Y-m-d H:i:s');
               $sql = "SELECT 
                         atm.wsid AS ATM_ID,
                         vendor.name AS Vendor,
@@ -314,8 +315,8 @@ use Carbon\CarbonPeriod;
                 }
                 foreach ($period as $date) {
                     foreach($dateIterator as $dateIteration){
-                        $date2 = Carbon::parse($dateIteration['assigned_date']);
-                        if($date->eq($date2)){
+                        $date2 = Carbon::parse($dateIteration['assigned_date'])->startOfDay();
+                        if($date->startOfDay()->eq($date2)){
                             echo "<td>1</td>";
                             continue 2;
                         }
