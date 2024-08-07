@@ -59,6 +59,7 @@ use Carbon\CarbonPeriod;
                   echo "<th>" . $date->format('l j') . "</th>";
                 }
                 ?>
+                <th> Type Visit </th>
               </tr>
             </thead>
             <tbody>
@@ -173,6 +174,7 @@ use Carbon\CarbonPeriod;
                     }
                     echo "<td>0</td>";
                 }
+                 echo "<td> Scheduled </td>";
                  echo "</tr>";
               }
             } else {
