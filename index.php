@@ -71,10 +71,14 @@ use Carbon\CarbonPeriod;
                 <th>Start Date</th>
                 <th>ATM Monthly Visit</th>
                 <?php
-                $period = CarbonPeriod::create(Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth());
+                $selectedMonth = isset($_GET['month']) ? $_GET['month'] : Carbon::now()->format('m');
+                $year = Carbon::now()->year;
+                $startOfMonth = Carbon::createFromDate($year, $selectedMonth, 1)->startOfMonth();
+                $endOfMonth = Carbon::createFromDate($year, $selectedMonth, 1)->endOfMonth();
+                $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
 
-                foreach ($period as $month) {
-                  echo "<th>" . $month->format('l j') . "</th>";
+                foreach ($period as $date) {
+                  echo "<th>" . $date->format('l j') . "</th>";
                 }
                 ?>
                 <th> Type Visit </th>
