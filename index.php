@@ -105,6 +105,8 @@ use Carbon\CarbonPeriod;
                           vendor.name AS Vendor,
                           location.name AS Location,
                           user.name AS UserName,
+                          user.id AS agent_id,
+                          location.id AS location_id,
                           COUNT(unscheduled_visit.id) AS visit_count
                       FROM 
                           focus_cimb.atm
@@ -122,7 +124,9 @@ use Carbon\CarbonPeriod;
                           atm.wsid, 
                           vendor.name, 
                           location.name, 
-                          user.name
+                          user.name,
+                          user.id,
+                          location.id
                       ORDER BY 
                           atm.wsid ASC;";
             } else {
