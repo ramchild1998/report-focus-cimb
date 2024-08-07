@@ -54,8 +54,7 @@ use Carbon\CarbonPeriod;
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
         <form action="export.php" method="POST">
-          <input type="hidden" name="start_date" value="<?php echo isset($start_date) ? $start_date : ''; ?>">
-          <input type="hidden" name="end_date" value="<?php echo isset($end_date) ? $end_date : ''; ?>">
+          <input type="hidden" name="month" value="<?php echo isset($selectedMonth) ? $selectedMonth : ''; ?>">
           <button type="submit" class="btn btn-success">Export to Excel</button>
         </form>
       </div>
@@ -72,12 +71,10 @@ use Carbon\CarbonPeriod;
                 <th>Start Date</th>
                 <th>ATM Monthly Visit</th>
                 <?php
-                $startDate = Carbon::now()->startOfMonth();
-                $endDate = Carbon::now()->endOfMonth();
-                $period = CarbonPeriod::create($startDate, $endDate);
+                $period = CarbonPeriod::create(Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth());
 
-                foreach ($period as $date) {
-                  echo "<th>" . $date->format('l j') . "</th>";
+                foreach ($period as $month) {
+                  echo "<th>" . $month->format('l j') . "</th>";
                 }
                 ?>
                 <th> Type Visit </th>
@@ -87,8 +84,8 @@ use Carbon\CarbonPeriod;
             <?php
             if (isset($_GET['month']) && !empty($_GET['month'])) {
               $month = $_GET['month'];
-              $start_date = Carbon::now()->year . '-' . $month . '-01';
-              $end_date = Carbon::parse($start_date)->endOfMonth()->toDateString();
+              $start_month = Carbon::now()->year . '-' . $month . '-01';
+              $end_month = Carbon::parse($start_month)->endOfMonth()->toDateString();
               $sql = "SELECT 
                         atm.wsid AS ATM_ID,
                         vendor.name AS Vendor,
@@ -111,7 +108,7 @@ use Carbon\CarbonPeriod;
                       WHERE 
                         location.is_active = 1 AND
                         schedule.status = 'completed' AND
-                        agent_schedule.effective_date BETWEEN '$start_date' AND '$end_date'
+                        agent_schedule.effective_date BETWEEN '$start_month' AND '$end_month'
                       GROUP BY 
                         atm.wsid, 
                         vendor.name, 
