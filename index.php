@@ -71,6 +71,7 @@ use Carbon\CarbonPeriod;
                         atm.wsid AS ATM_ID,
                         vendor.name AS Vendor,
                         location.name AS Location,
+                        agent_schedule.effective_date AS effective_date,
                         user.name AS UserName,
                         COUNT(schedule.id) AS visit_count
                       FROM 
@@ -93,7 +94,8 @@ use Carbon\CarbonPeriod;
                         atm.wsid, 
                         vendor.name, 
                         location.name, 
-                        user.name
+                        user.name,
+                        agent_schedule.effective_date
                       ORDER BY 
                         atm.wsid ASC";
             } else {
@@ -102,6 +104,7 @@ use Carbon\CarbonPeriod;
                         vendor.name AS Vendor,
                         location.name AS Location,
                         user.name AS UserName,
+                        agent_schedule.effective_date AS effective_date,
                         COUNT(schedule.id) AS visit_count
                       FROM 
                         focus_cimb.atm
@@ -122,7 +125,8 @@ use Carbon\CarbonPeriod;
                         atm.wsid, 
                         vendor.name, 
                         location.name, 
-                        user.name
+                        user.name,
+                        agent_schedule.effective_date
                       ORDER BY 
                         atm.wsid ASC";
             }
@@ -153,7 +157,7 @@ use Carbon\CarbonPeriod;
                 echo "<td>" . $row['UserName'] . "</td>";
                 echo "<td>" . $row['ATM_ID'] . "</td>";
                 echo "<td>" . $row['Location'] . "</td>";
-                echo "<td>" . (isset($row['effective_date']) ? $row['effective_date'] : '') . "</td>";
+                echo "<td>" . $row['effective_date'] . "</td>";
                 echo "<td>" . $row['visit_count'] . "</td>";
                 $dateIterator = [];
                 while ($iterator = $resultRow->fetch_assoc()) {
