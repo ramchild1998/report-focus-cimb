@@ -146,7 +146,7 @@ if ($result->num_rows > 0) {
         $sheet->setCellValue('C' . $rowNum, $row['UserName']);
         $sheet->setCellValue('D' . $rowNum, $row['ATM_ID']);
         $sheet->setCellValue('E' . $rowNum, $row['Location']);
-        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d H:i:s'));
+        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d'));
         $sheet->setCellValue('G' . $rowNum, $row['visit_count']);
         
         $sheet->getStyle('A' . $rowNum . ':G' . $rowNum)->applyFromArray($bodyStyleArray);
