@@ -19,7 +19,7 @@ use Carbon\CarbonPeriod;
   <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"
     crossorigin="anonymous"></script>
-  <title>Laporan</title>
+  <title>REPORT FOCUS CIMB NIAGA</title>
 </head>
 
 <body>
@@ -44,9 +44,9 @@ use Carbon\CarbonPeriod;
               '11' => 'November',
               '12' => 'Desember'
             ];
-            $currentMonth = Carbon::now()->format('m');
+            $selectedMonth = isset($_GET['month']) ? $_GET['month'] : Carbon::now()->format('m');
             foreach ($months as $num => $name) {
-              $selected = ($num == $currentMonth) ? 'selected' : '';
+              $selected = ($num == $selectedMonth) ? 'selected' : '';
               echo "<option value='$num' $selected>$name</option>";
             }
             ?>
