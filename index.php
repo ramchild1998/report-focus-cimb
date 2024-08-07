@@ -137,7 +137,9 @@ use Carbon\CarbonPeriod;
                       LEFT JOIN 
                           focus_cimb.user ON user.id = unscheduled_visit.agent_id
                       WHERE 
-                          unscheduled_visit.status = 'completed'
+                          location.is_active = 1 AND
+                          unscheduled_visit.status = 'completed' AND
+                          unscheduled_visit.assigned_date BETWEEN '$start_month' AND '$end_month'
                       GROUP BY 
                           atm.wsid, 
                           vendor.name, 
@@ -198,6 +200,7 @@ use Carbon\CarbonPeriod;
                       LEFT JOIN 
                           focus_cimb.user ON user.id = unscheduled_visit.agent_id
                       WHERE 
+                          location.is_active = 1 AND
                           unscheduled_visit.status = 'completed'
                       GROUP BY 
                           atm.wsid, 
