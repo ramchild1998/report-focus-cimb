@@ -200,7 +200,7 @@ function fillSheet($conn, $result, $sheet, $period, $bodyStyleArray, &$rowNum, &
             $status = 0;
             foreach($dateIterator as $dateIteration){
                 $date2 = Carbon::parse($dateIteration['assigned_date']);
-                if($date->eq($date2)){
+                if($date->startOfDay()->eq($date2->startOfDay())){
                     $status = 1;
                     break;
                 }
@@ -210,6 +210,7 @@ function fillSheet($conn, $result, $sheet, $period, $bodyStyleArray, &$rowNum, &
             $sheet->getStyle($col . $rowNum)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $col++;
         }
+        $sheet->getStyle($col . $rowNum)->applyFromArray($bodyStyleArray);
         $sheet->setCellValue($col . $rowNum, $type);
         $rowNum++;
     }
