@@ -36,13 +36,14 @@ $start_month = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format(
 $end_month = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d H:i:s');
 
 // Query untuk data terjadwal
-$sql = "SELECT 
+$sqlScheduled = "SELECT 
           atm.wsid AS ATM_ID,
           vendor.name AS Vendor,
           location.name AS Location,
           agent_schedule.effective_date AS effective_date,
           user.name AS UserName,
-          COUNT(schedule.id) AS visit_count
+          COUNT(schedule.id) AS visit_count,
+          'Scheduled' AS visit_type
         FROM 
           focus_cimb.atm
         LEFT JOIN 
@@ -66,8 +67,7 @@ $sql = "SELECT
           user.name,
           agent_schedule.effective_date
         ORDER BY 
-          atm.wsid ASC
-        LIMIT $start, $length";
+          atm.wsid ASC";
 
 // Query untuk data tidak terjadwal
 $sqlUnscheduled = "
@@ -78,7 +78,8 @@ $sqlUnscheduled = "
             user.name AS UserName,
             user.id AS agent_id,
             location.id AS location_id,
-            COUNT(unscheduled_visit.id) AS visit_count
+            COUNT(unscheduled_visit.id) AS visit_count,
+            'Unscheduled' AS visit_type
         FROM 
             focus_cimb.atm
         LEFT JOIN 
@@ -101,53 +102,86 @@ $sqlUnscheduled = "
             user.id,
             location.id
         ORDER BY 
-            atm.wsid ASC
-        LIMIT $start, $length";
+            atm.wsid ASC";
 
-$result = $conn->query($sql);
+$resultScheduled = $conn->query($sqlScheduled);
 $resultUnscheduled = $conn->query($sqlUnscheduled);
 
+// Gabungkan hasil query
+$combinedResults = [];
+if ($resultScheduled->num_rows > 0) {
+    while ($row = $resultScheduled->fetch_assoc()) {
+        $combinedResults[] = $row;
+    }
+}
+if ($resultUnscheduled->num_rows > 0) {
+    while ($row = $resultUnscheduled->fetch_assoc()) {
+        $combinedResults[] = $row;
+    }
+}
+
 // Total records tanpa limit
-$totalRecordsQuery = "SELECT COUNT(*) as total FROM focus_cimb.atm";
-$totalRecordsResult = $conn->query($totalRecordsQuery);
-$totalRecords = $totalRecordsResult->fetch_assoc()['total'];
+$totalRecords = count($combinedResults);
+
+// Terapkan batasan LIMIT pada hasil gabungan
+$paginatedResults = array_slice($combinedResults, $start, $length);
 
 $data = [];
 $no = $start + 1;
 
-if ($result->num_rows > 0) {
-  while($row = $result->fetch_assoc()) {
-    $sqlRow = "SELECT 
-              schedule.assigned_date
-              FROM 
-              focus_cimb.atm
-              LEFT JOIN 
-              focus_cimb.location ON location.id = atm.location_id
-              INNER JOIN 
-              focus_cimb.schedule ON schedule.location_id = atm.location_id
-              WHERE 
-              location.is_active = 1 AND
-              schedule.status = 'completed' AND
-              atm.wsid= '". $row['ATM_ID'] ."'
-              ORDER BY 
-              atm.wsid ASC,
-              schedule.assigned_date ASC;";
+foreach ($paginatedResults as $row) {
+    $sqlRow = $row['visit_type'] === 'Scheduled' ? 
+        "SELECT 
+            schedule.assigned_date
+        FROM 
+            focus_cimb.atm
+        LEFT JOIN 
+            focus_cimb.location ON location.id = atm.location_id
+        INNER JOIN 
+            focus_cimb.schedule ON schedule.location_id = atm.location_id
+        WHERE 
+            location.is_active = 1 AND
+            schedule.status = 'completed' AND
+            atm.wsid= '". $row['ATM_ID'] ."'
+        ORDER BY 
+            atm.wsid ASC,
+            schedule.assigned_date ASC;" :
+        "SELECT 
+            unscheduled_visit.assigned_date
+        FROM 
+            focus_cimb.atm
+        LEFT JOIN 
+            focus_cimb.location ON location.id = atm.location_id
+        INNER JOIN 
+            focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+        LEFT JOIN 
+            focus_cimb.user ON user.id = unscheduled_visit.agent_id
+        WHERE 
+            location.is_active = 1 AND
+            unscheduled_visit.status = 'completed' AND
+            atm.wsid= '". $row['ATM_ID'] ."' AND
+            user.id= '". $row['agent_id'] ."' AND
+            location.id= '". $row['location_id'] ."'
+        ORDER BY 
+            atm.wsid ASC,
+            unscheduled_visit.assigned_date ASC;";
+
     $resultRow = $conn->query($sqlRow);
     $rowData = [
-      $no++,
-      $row['Vendor'],
-      $row['UserName'],
-      $row['ATM_ID'],
-      $row['Location'],
-      $row['effective_date'],
-      $row['visit_count']
+        $no++,
+        $row['Vendor'],
+        $row['UserName'],
+        $row['ATM_ID'],
+        $row['Location'],
+        $row['effective_date'] ?? '',
+        $row['visit_count']
     ];
 
     // Tambahkan kolom untuk setiap hari dalam periode
     $startOfMonth = Carbon::createFromDate($year, $month, 1)->startOfMonth();
     $endOfMonth = Carbon::createFromDate($year, $month, 1)->endOfMonth();
     $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
-        
+
     $dateIterator = [];
     while ($iterator = $resultRow->fetch_assoc()) {
         $dateIterator[] = $iterator;
@@ -157,80 +191,22 @@ if ($result->num_rows > 0) {
         foreach($dateIterator as $dateIteration){
             $date2 = Carbon::parse($dateIteration['assigned_date']);
             if($date->eq($date2)){
-                    $rowData[] = 1;
+                $rowData[] = 1;
                 continue 2;
             }
         }
         $rowData[] = 0;
     }
 
-    $rowData[] = 'Scheduled';
+    $rowData[] = $row['visit_type'];
     $data[] = $rowData;
-  }
-}
-
-if ($resultUnscheduled->num_rows > 0) {
-  while($row = $resultUnscheduled->fetch_assoc()) {
-    $sqlRow = "SELECT 
-              unscheduled_visit.assigned_date
-              FROM 
-              focus_cimb.atm
-              LEFT JOIN 
-              focus_cimb.location ON location.id = atm.location_id
-              INNER JOIN 
-              focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
-              LEFT JOIN 
-              focus_cimb.user ON user.id = unscheduled_visit.agent_id
-              WHERE 
-              location.is_active = 1 AND
-              unscheduled_visit.status = 'completed' AND
-              atm.wsid= '". $row['ATM_ID'] ."' AND
-              user.id= '". $row['agent_id'] ."' AND
-              location.id= '". $row['location_id'] ."'
-              ORDER BY 
-              atm.wsid ASC,
-              unscheduled_visit.assigned_date ASC;";
-    $resultRow = $conn->query($sqlRow);
-    $rowData = [
-      $no++,
-      $row['Vendor'],
-      $row['UserName'],
-      $row['ATM_ID'],
-      $row['Location'],
-      $row['effective_date'] ?? '',
-      $row['visit_count']
-    ];
-
-    // Tambahkan kolom untuk setiap hari dalam periode
-    $startOfMonth = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-    $endOfMonth = Carbon::createFromDate($year, $month, 1)->endOfMonth();
-    $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
-
-    $dateIterator = [];
-    while ($iterator = $resultRow->fetch_assoc()) {
-        $dateIterator[] = $iterator;
-    }
-    foreach ($period as $date) {
-        foreach($dateIterator as $dateIteration){
-            $date2 = Carbon::parse($dateIteration['assigned_date'])->startOfDay();
-            if($date->startOfDay()->eq($date2)){
-                    $rowData[] = 1;
-                continue 2;
-            }
-        }
-            $rowData[] = 0;
-    }
-
-    $rowData[] = 'Unscheduled';
-    $data[] = $rowData;
-  }
 }
 
 $response = [
-  "draw" => $draw,
-  "recordsTotal" => $totalRecords,
-  "recordsFiltered" => $totalRecords,
-  "data" => $data
+    "draw" => $draw,
+    "recordsTotal" => $totalRecords,
+    "recordsFiltered" => $totalRecords,
+    "data" => $data
 ];
 
 echo json_encode($response);

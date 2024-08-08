@@ -1,3 +1,4 @@
 node_modules/
 connection.php
 debug.log
+error.log
