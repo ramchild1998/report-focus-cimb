@@ -142,7 +142,8 @@ foreach ($paginatedResults as $row) {
         WHERE 
             location.is_active = 1 AND
             schedule.status = 'completed' AND
-            atm.wsid= '". $row['ATM_ID'] ."'
+            atm.wsid= '". $row['ATM_ID'] ."' AND
+            schedule.assigned_date BETWEEN '". $start_month . "' AND '" . $end_month ."'
         ORDER BY 
             atm.wsid ASC,
             schedule.assigned_date ASC;" :
@@ -161,7 +162,8 @@ foreach ($paginatedResults as $row) {
             unscheduled_visit.status = 'completed' AND
             atm.wsid= '". $row['ATM_ID'] ."' AND
             user.id= '". $row['agent_id'] ."' AND
-            location.id= '". $row['location_id'] ."'
+            location.id= '". $row['location_id'] ."' AND
+            unscheduled_visit.assigned_date BETWEEN '". $start_month . "' AND '" . $end_month ."'
         ORDER BY 
             atm.wsid ASC,
             unscheduled_visit.assigned_date ASC;";
