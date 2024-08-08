@@ -1,6 +1,5 @@
 <?php
 include 'connection.php';
-
 require 'vendor/autoload.php';
 
 use Carbon\Carbon;
@@ -63,15 +62,15 @@ use Carbon\CarbonPeriod;
           </select>
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
-        <form action="export.php" method="POST">
-          <input type="hidden" name="month" value="<?php echo isset($selectedMonth) ? $selectedMonth : ''; ?>">
-          <input type="hidden" name="year" value="<?php echo isset($selectedYear) ? $selectedYear : ''; ?>">
+        <form action="exports.php" method="POST">
+          <input type="hidden" name="month" id="exportMonth" value="<?php echo isset($selectedMonth) ? $selectedMonth : ''; ?>">
+          <input type="hidden" name="year" id="exportYear" value="<?php echo isset($selectedYear) ? $selectedYear : ''; ?>">
           <button type="submit" class="btn btn-success">Export to Excel</button>
         </form>
       </div>
       <div class="card-body">
         <div class="table-responsive">
-        <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
+          <table id="laporanTable" class="table table-striped table-bordered" style="width:100%">
             <thead>
               <tr>
                 <th>No</th>
@@ -92,245 +91,10 @@ use Carbon\CarbonPeriod;
                   echo "<th>" . $date->format('l j') . "</th>";
                 }
                 ?>
-                <th> Type Visit </th>
+                <th>Type Visit</th>
               </tr>
             </thead>
             <tbody>
-            <?php
-            if (isset($_GET['month']) && !empty($_GET['month']) && isset($_GET['year']) && !empty($_GET['year'])) {
-              $month = $_GET['month'];
-              $year = $_GET['year'];
-              $start_month = $year . '-' . $month . '-01';
-              $end_month = Carbon::parse($start_month)->endOfMonth()->endOfDay()->format('Y-m-d H:i:s');
-              $start_month = Carbon::parse($start_month)->startOfDay()->format('Y-m-d H:i:s');
-              $sql = "SELECT 
-                        atm.wsid AS ATM_ID,
-                        vendor.name AS Vendor,
-                        location.name AS Location,
-                        agent_schedule.effective_date AS effective_date,
-                        user.name AS UserName,
-                        COUNT(schedule.id) AS visit_count
-                      FROM 
-                        focus_cimb.atm
-                      LEFT JOIN 
-                        focus_cimb.vendor ON vendor.id = atm.vendor_id
-                      LEFT JOIN 
-                        focus_cimb.location ON location.id = atm.location_id
-                      INNER JOIN 
-                        focus_cimb.schedule ON schedule.location_id = atm.location_id
-                      LEFT JOIN 
-                        focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
-                      LEFT JOIN 
-                        focus_cimb.user ON user.id = agent_schedule.agent_id
-                      WHERE 
-                        location.is_active = 1 AND
-                        schedule.status = 'completed' AND
-                        agent_schedule.effective_date BETWEEN '$start_month' AND '$end_month'
-                      GROUP BY 
-                        atm.wsid, 
-                        vendor.name, 
-                        location.name, 
-                        user.name,
-                        agent_schedule.effective_date
-                      ORDER BY 
-                        atm.wsid ASC";
-              $sqlUnscheduled = "
-                      SELECT 
-                          atm.wsid AS ATM_ID,
-                          vendor.name AS Vendor,
-                          location.name AS Location,
-                          user.name AS UserName,
-                          user.id AS agent_id,
-                          location.id AS location_id,
-                          COUNT(unscheduled_visit.id) AS visit_count
-                      FROM 
-                          focus_cimb.atm
-                      LEFT JOIN 
-                          focus_cimb.vendor ON vendor.id = atm.vendor_id
-                      LEFT JOIN 
-                          focus_cimb.location ON location.id = atm.location_id
-                      JOIN 
-                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
-                      LEFT JOIN 
-                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
-                      WHERE 
-                          location.is_active = 1 AND
-                          unscheduled_visit.status = 'completed' AND
-                          unscheduled_visit.assigned_date BETWEEN '$start_month' AND '$end_month'
-                      GROUP BY 
-                          atm.wsid, 
-                          vendor.name, 
-                          location.name, 
-                          user.name,
-                          user.id,
-                          location.id
-                      ORDER BY 
-                          atm.wsid ASC;";
-            } else {
-              $sql = "SELECT 
-                        atm.wsid AS ATM_ID,
-                        vendor.name AS Vendor,
-                        location.name AS Location,
-                        user.name AS UserName,
-                        agent_schedule.effective_date AS effective_date,
-                        COUNT(schedule.id) AS visit_count
-                      FROM 
-                        focus_cimb.atm
-                      LEFT JOIN 
-                        focus_cimb.vendor ON vendor.id = atm.vendor_id
-                      LEFT JOIN 
-                        focus_cimb.location ON location.id = atm.location_id
-                      INNER JOIN
-                        focus_cimb.schedule ON schedule.location_id = atm.location_id
-                      LEFT JOIN 
-                        focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
-                      LEFT JOIN 
-                        focus_cimb.user ON user.id = agent_schedule.agent_id
-                      WHERE 
-                        location.is_active = 1 AND
-                        schedule.status = 'completed'
-                      GROUP BY 
-                        atm.wsid, 
-                        vendor.name, 
-                        location.name, 
-                        user.name,
-                        agent_schedule.effective_date
-                      ORDER BY 
-                        atm.wsid ASC";
-              $sqlUnscheduled = "
-                      SELECT 
-                          atm.wsid AS ATM_ID,
-                          vendor.name AS Vendor,
-                          location.name AS Location,
-                          user.name AS UserName,
-                          user.id AS agent_id,
-                          location.id AS location_id,
-                          COUNT(unscheduled_visit.id) AS visit_count
-                      FROM 
-                          focus_cimb.atm
-                      LEFT JOIN 
-                          focus_cimb.vendor ON vendor.id = atm.vendor_id
-                      LEFT JOIN 
-                          focus_cimb.location ON location.id = atm.location_id
-                      JOIN 
-                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
-                      LEFT JOIN 
-                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
-                      WHERE 
-                          location.is_active = 1 AND
-                          unscheduled_visit.status = 'completed'
-                      GROUP BY 
-                          atm.wsid, 
-                          vendor.name, 
-                          location.name, 
-                          user.name,
-                          user.id,
-                          location.id
-                      ORDER BY 
-                          atm.wsid ASC;";
-            }
-
-            $result = $conn->query($sql);
-            $no = 1;
-            $resultUnscheduled = $conn->query($sqlUnscheduled);
-            if ($result->num_rows > 0) {
-             
-              while($row = $result->fetch_assoc()) {
-                $sqlRow = "SELECT 
-                          schedule.assigned_date
-                          FROM 
-                          focus_cimb.atm
-                          LEFT JOIN 
-                          focus_cimb.location ON location.id = atm.location_id
-                          INNER JOIN 
-                          focus_cimb.schedule ON schedule.location_id = atm.location_id
-                          WHERE 
-                          location.is_active = 1 AND
-                          schedule.status = 'completed' AND
-                          atm.wsid= '". $row['ATM_ID'] ."'
-                          ORDER BY 
-                          atm.wsid ASC,
-                          schedule.assigned_date ASC;";
-                $resultRow = $conn->query($sqlRow);
-                echo "<tr>";
-                echo "<td>" . $no++ . "</td>";
-                echo "<td>" . $row['Vendor'] . "</td>";
-                echo "<td>" . $row['UserName'] . "</td>";
-                echo "<td>" . $row['ATM_ID'] . "</td>";
-                echo "<td>" . $row['Location'] . "</td>";
-                echo "<td>" . $row['effective_date'] . "</td>";
-                echo "<td>" . $row['visit_count'] . "</td>";
-                $dateIterator = [];
-                while ($iterator = $resultRow->fetch_assoc()) {
-                    $dateIterator[] = $iterator;
-                }
-                foreach ($period as $date) {
-                    foreach($dateIterator as $dateIteration){
-                        $date2 = Carbon::parse($dateIteration['assigned_date']);
-                        if($date->eq($date2)){
-                            echo "<td>1</td>";
-                            continue 2;
-                        }
-                    }
-                    echo "<td>0</td>";
-                }
-                 echo "<td> Scheduled </td>";
-                 echo "</tr>";
-              }
-            }
-            if ($resultUnscheduled->num_rows > 0) {
-        
-              while($row = $resultUnscheduled->fetch_assoc()) {
-                $sqlRow = "SELECT 
-                          unscheduled_visit.assigned_date
-                          FROM 
-                          focus_cimb.atm
-                          LEFT JOIN 
-                          focus_cimb.location ON location.id = atm.location_id
-                          INNER JOIN 
-                          focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
-                          LEFT JOIN 
-                          focus_cimb.user ON user.id = unscheduled_visit.agent_id
-                          WHERE 
-                          location.is_active = 1 AND
-                          unscheduled_visit.status = 'completed' AND
-                          atm.wsid= '". $row['ATM_ID'] ."' AND
-                          user.id= '". $row['agent_id'] ."' AND
-                          location.id= '". $row['location_id'] ."'
-                          ORDER BY 
-                          atm.wsid ASC,
-                          unscheduled_visit.assigned_date ASC;";
-                $resultRow = $conn->query($sqlRow);
-                echo "<tr>";
-                echo "<td>" . $no++ . "</td>";
-                echo "<td>" . $row['Vendor'] . "</td>";
-                echo "<td>" . $row['UserName'] . "</td>";
-                echo "<td>" . $row['ATM_ID'] . "</td>";
-                echo "<td>" . $row['Location'] . "</td>";
-                echo "<td>" . (isset($row['effective_date']) ? $row['effective_date'] : '' ) . "</td>";
-                echo "<td>" . $row['visit_count'] . "</td>";
-                $dateIterator = [];
-                while ($iterator = $resultRow->fetch_assoc()) {
-                    $dateIterator[] = $iterator;
-                }
-                foreach ($period as $date) {
-                    foreach($dateIterator as $dateIteration){
-                        $date2 = Carbon::parse($dateIteration['assigned_date'])->startOfDay();
-                        if($date->startOfDay()->eq($date2)){
-                            echo "<td>1</td>";
-                            continue 2;
-                        }
-                    }
-                    echo "<td>0</td>";
-                }
-                 echo "<td> Unscheduled </td>";
-                 echo "</tr>";
-              }
-            }
-            if ($resultUnscheduled->num_rows < 1 && $result->num_rows < 1) {
-              echo "<tr><td colspan='7'>Tidak ada laporan!</td></tr>";
-            }
-            ?>
             </tbody>
           </table>
         </div>
@@ -345,6 +109,16 @@ use Carbon\CarbonPeriod;
   <script>
     $(document).ready(function() {
       $('#laporanTable').DataTable({
+        "processing": true,
+        "serverSide": true,
+        "ajax": {
+          "url": "server_processing.php",
+          "type": "POST",
+          "data": function(d) {
+            d.month = $('#monthpicker').val();
+            d.year = $('#yearpicker').val();
+          }
+        },
         "order": [[ $('th').length - 1, "asc" ]]
       });
     });
