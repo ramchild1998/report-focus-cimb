@@ -11,5 +11,5 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
-echo "<span style='color:green;'>&#9679;</span> Database Connected";
+// echo "<span style='color:green;'>&#9679;</span> Database Connected";
 ?>
