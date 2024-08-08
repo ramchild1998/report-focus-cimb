@@ -56,8 +56,10 @@ $sheet->setCellValue('E1', 'Location');
 $sheet->setCellValue('F1', 'Start Date');
 $sheet->setCellValue('G1', 'ATM Monthly Visit');
 
-$startDate = Carbon::now()->startOfMonth();
-$endDate = Carbon::now()->endOfMonth();
+$selectedMonth = isset($_POST['month']) ? $_POST['month'] : Carbon::now()->format('m');
+$selectedYear = isset($_POST['year']) ? $_POST['year'] : Carbon::now()->year;
+$startDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth()->startOfDay()->format("Y-m-d H:i:s");
+$endDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->endOfMonth()->endOfDay()->format("Y-m-d H:i:s");
 $period = CarbonPeriod::create($startDate, $endDate);
 
 $col = 'G';
@@ -65,88 +67,89 @@ foreach ($period as $date) {
     $col++;
     $sheet->setCellValue($col . '1', $date->format('l j'));
 }
+$col++;
+$sheet->setCellValue($col . '1', 'Type Visit');
 
 $sheet->getStyle('A1:' . $col . '1')->applyFromArray($headerStyleArray);
 $sheet->setAutoFilter('A1:' . $col . '1');
 
-if (isset($_POST['start_date']) && isset($_POST['end_date']) && !empty($_POST['start_date']) && !empty($_POST['end_date'])) {
-    $start_date = $_POST['start_date'];
-    $end_date = $_POST['end_date'];
-    $sql = "SELECT 
-              atm.wsid AS ATM_ID,
-              vendor.name AS Vendor,
-              location.name AS Location,
-              user.name AS UserName,
-              agent_schedule.effective_date AS Start_Date,
-              COUNT(schedule.id) AS visit_count
-            FROM 
-              focus_cimb.atm
-            LEFT JOIN 
-              focus_cimb.vendor ON vendor.id = atm.vendor_id
-            LEFT JOIN 
-              focus_cimb.location ON location.id = atm.location_id
-            INNER JOIN 
-              focus_cimb.schedule ON schedule.location_id = atm.location_id
-            LEFT JOIN 
-              focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
-            LEFT JOIN 
-              focus_cimb.user ON user.id = agent_schedule.agent_id
-            WHERE 
-              location.is_active = 1 AND
-              schedule.status = 'completed' AND
-              agent_schedule.effective_date BETWEEN '$start_date' AND '$end_date'
-            GROUP BY 
-              atm.wsid, 
-              vendor.name, 
-              location.name, 
-              user.name,
-              agent_schedule.effective_date
-            ORDER BY 
-              atm.wsid ASC";
-} else {
-    $sql = "SELECT 
-              atm.wsid AS ATM_ID,
-              vendor.name AS Vendor,
-              location.name AS Location,
-              user.name AS UserName,
-              agent_schedule.effective_date AS Start_Date,
-              COUNT(schedule.id) AS visit_count
-            FROM 
-              focus_cimb.atm
-            LEFT JOIN 
-              focus_cimb.vendor ON vendor.id = atm.vendor_id
-            LEFT JOIN 
-              focus_cimb.location ON location.id = atm.location_id
-            INNER JOIN
-              focus_cimb.schedule ON schedule.location_id = atm.location_id
-            LEFT JOIN 
-              focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
-            LEFT JOIN 
-              focus_cimb.user ON user.id = agent_schedule.agent_id
-            WHERE 
-              location.is_active = 1 AND
-              schedule.status = 'completed'
-            GROUP BY 
-              atm.wsid, 
-              vendor.name, 
-              location.name, 
-              user.name,
-              agent_schedule.effective_date
-            ORDER BY 
-              atm.wsid ASC";
-}
+$sqlScheduled = "SELECT 
+                  atm.wsid AS ATM_ID,
+                  vendor.name AS Vendor,
+                  location.name AS Location,
+                  user.name AS UserName,
+                  agent_schedule.effective_date AS Start_Date,
+                  COUNT(schedule.id) AS visit_count
+                FROM 
+                  focus_cimb.atm
+                LEFT JOIN 
+                  focus_cimb.vendor ON vendor.id = atm.vendor_id
+                LEFT JOIN 
+                  focus_cimb.location ON location.id = atm.location_id
+                INNER JOIN 
+                  focus_cimb.schedule ON schedule.location_id = atm.location_id
+                LEFT JOIN 
+                  focus_cimb.agent_schedule ON agent_schedule.id = schedule.agent_schedule_id
+                LEFT JOIN 
+                  focus_cimb.user ON user.id = agent_schedule.agent_id
+                WHERE 
+                  location.is_active = 1 AND
+                  schedule.status = 'completed' AND
+                  agent_schedule.effective_date BETWEEN '$startDate' AND '$endDate'
+                GROUP BY 
+                  atm.wsid, 
+                  vendor.name, 
+                  location.name, 
+                  user.name,
+                  agent_schedule.effective_date
+                ORDER BY 
+                  atm.wsid ASC";
 
-$result = $conn->query($sql);
+$sqlUnscheduled = "SELECT 
+                    atm.wsid AS ATM_ID,
+                    vendor.name AS Vendor,
+                    location.name AS Location,
+                    user.name AS UserName,
+                    user.id AS agent_id,
+                    location.id AS location_id,
+                    COUNT(unscheduled_visit.id) AS visit_count
+                  FROM 
+                    focus_cimb.atm
+                  LEFT JOIN 
+                    focus_cimb.vendor ON vendor.id = atm.vendor_id
+                  LEFT JOIN 
+                    focus_cimb.location ON location.id = atm.location_id
+                  JOIN 
+                    focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+                  LEFT JOIN 
+                    focus_cimb.user ON user.id = unscheduled_visit.agent_id
+                  WHERE 
+                    unscheduled_visit.status = 'completed' AND
+                    unscheduled_visit.assigned_date BETWEEN '$startDate' AND '$endDate'
+                  GROUP BY 
+                    atm.wsid, 
+                    vendor.name, 
+                    location.name, 
+                    user.name,
+                    user.id,
+                    location.id
+                  ORDER BY 
+                    atm.wsid ASC";
+
+$resultScheduled = $conn->query($sqlScheduled);
+$resultUnscheduled = $conn->query($sqlUnscheduled);
+
 $rowNum = 2;
 $no = 1;
-if ($result->num_rows > 0) {
+
+function fillSheet($conn, $result, $sheet, $period, $bodyStyleArray, &$rowNum, &$no, $type) {
     while ($row = $result->fetch_assoc()) {
         $sheet->setCellValue('A' . $rowNum, $no++);
         $sheet->setCellValue('B' . $rowNum, $row['Vendor']);
         $sheet->setCellValue('C' . $rowNum, $row['UserName']);
         $sheet->setCellValue('D' . $rowNum, $row['ATM_ID']);
         $sheet->setCellValue('E' . $rowNum, $row['Location']);
-        $sheet->setCellValue('F' . $rowNum, Carbon::parse($row['Start_Date'])->format('Y-m-d'));
+        $sheet->setCellValue('F' . $rowNum, isset($row['Start_Date']) ? Carbon::parse($row['Start_Date'])->format('Y-m-d') : '');
         $sheet->setCellValue('G' . $rowNum, $row['visit_count']);
         
         $sheet->getStyle('A' . $rowNum . ':G' . $rowNum)->applyFromArray($bodyStyleArray);
@@ -186,8 +189,17 @@ if ($result->num_rows > 0) {
             $sheet->getStyle($col . $rowNum)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
             $col++;
         }
+        $sheet->setCellValue($col . $rowNum, $type);
         $rowNum++;
     }
+}
+
+if ($resultScheduled->num_rows > 0) {
+    fillSheet($conn, $resultScheduled, $sheet, $period, $bodyStyleArray, $rowNum, $no, 'Scheduled');
+}
+
+if ($resultUnscheduled->num_rows > 0) {
+    fillSheet($conn, $resultUnscheduled, $sheet, $period, $bodyStyleArray, $rowNum, $no, 'Unscheduled');
 }
 
 // Set column width to auto size based on content
