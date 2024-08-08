@@ -190,7 +190,7 @@ foreach ($paginatedResults as $row) {
     foreach ($period as $date) {
         foreach($dateIterator as $dateIteration){
             $date2 = Carbon::parse($dateIteration['assigned_date']);
-            if($date->eq($date2)){
+            if($date->startOfDay()->eq($date2->startOfDay())){
                 $rowData[] = 1;
                 continue 2;
             }
