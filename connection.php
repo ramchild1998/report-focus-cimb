@@ -1,7 +1,7 @@
 <?php
-$servername = "localhost";
+$servername = "45.9.191.98";
 $username = "root";
-$password = "";
+$password = "password";
 $dbname = "focus_cimb";
 
 // Membuat koneksi
