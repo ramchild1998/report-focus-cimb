@@ -117,6 +117,22 @@ $no = $start + 1;
 
 if ($result->num_rows > 0) {
   while($row = $result->fetch_assoc()) {
+    $sqlRow = "SELECT 
+              schedule.assigned_date
+              FROM 
+              focus_cimb.atm
+              LEFT JOIN 
+              focus_cimb.location ON location.id = atm.location_id
+              INNER JOIN 
+              focus_cimb.schedule ON schedule.location_id = atm.location_id
+              WHERE 
+              location.is_active = 1 AND
+              schedule.status = 'completed' AND
+              atm.wsid= '". $row['ATM_ID'] ."'
+              ORDER BY 
+              atm.wsid ASC,
+              schedule.assigned_date ASC;";
+    $resultRow = $conn->query($sqlRow);
     $rowData = [
       $no++,
       $row['Vendor'],
@@ -131,9 +147,21 @@ if ($result->num_rows > 0) {
     $startOfMonth = Carbon::createFromDate($year, $month, 1)->startOfMonth();
     $endOfMonth = Carbon::createFromDate($year, $month, 1)->endOfMonth();
     $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
+        
+    $dateIterator = [];
+    while ($iterator = $resultRow->fetch_assoc()) {
+        $dateIterator[] = $iterator;
+    }
 
     foreach ($period as $date) {
-      $rowData[] = 0; // Ganti dengan logika yang sesuai untuk mengisi data
+        foreach($dateIterator as $dateIteration){
+            $date2 = Carbon::parse($dateIteration['assigned_date']);
+            if($date->eq($date2)){
+                    $rowData[] = 1;
+                continue 2;
+            }
+        }
+        $rowData[] = 0;
     }
 
     $rowData[] = 'Scheduled';
@@ -143,6 +171,26 @@ if ($result->num_rows > 0) {
 
 if ($resultUnscheduled->num_rows > 0) {
   while($row = $resultUnscheduled->fetch_assoc()) {
+    $sqlRow = "SELECT 
+              unscheduled_visit.assigned_date
+              FROM 
+              focus_cimb.atm
+              LEFT JOIN 
+              focus_cimb.location ON location.id = atm.location_id
+              INNER JOIN 
+              focus_cimb.unscheduled_visit ON unscheduled_visit.location_id = atm.location_id
+              LEFT JOIN 
+              focus_cimb.user ON user.id = unscheduled_visit.agent_id
+              WHERE 
+              location.is_active = 1 AND
+              unscheduled_visit.status = 'completed' AND
+              atm.wsid= '". $row['ATM_ID'] ."' AND
+              user.id= '". $row['agent_id'] ."' AND
+              location.id= '". $row['location_id'] ."'
+              ORDER BY 
+              atm.wsid ASC,
+              unscheduled_visit.assigned_date ASC;";
+    $resultRow = $conn->query($sqlRow);
     $rowData = [
       $no++,
       $row['Vendor'],
@@ -158,8 +206,19 @@ if ($resultUnscheduled->num_rows > 0) {
     $endOfMonth = Carbon::createFromDate($year, $month, 1)->endOfMonth();
     $period = CarbonPeriod::create($startOfMonth, $endOfMonth);
 
+    $dateIterator = [];
+    while ($iterator = $resultRow->fetch_assoc()) {
+        $dateIterator[] = $iterator;
+    }
     foreach ($period as $date) {
-      $rowData[] = 0; // Ganti dengan logika yang sesuai untuk mengisi data
+        foreach($dateIterator as $dateIteration){
+            $date2 = Carbon::parse($dateIteration['assigned_date'])->startOfDay();
+            if($date->startOfDay()->eq($date2)){
+                    $rowData[] = 1;
+                continue 2;
+            }
+        }
+            $rowData[] = 0;
     }
 
     $rowData[] = 'Unscheduled';
