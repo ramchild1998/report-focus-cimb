@@ -25,7 +25,10 @@ use Symfony\Component\Translation\MessageCatalogue;
  */
 class QtFileLoader implements LoaderInterface
 {
-    public function load(mixed $resource, string $locale, string $domain = 'messages'): MessageCatalogue
+    /**
+     * {@inheritdoc}
+     */
+    public function load($resource, string $locale, string $domain = 'messages')
     {
         if (!class_exists(XmlUtils::class)) {
             throw new RuntimeException('Loading translations from the QT format requires the Symfony Config component.');
@@ -57,13 +60,14 @@ class QtFileLoader implements LoaderInterface
             foreach ($translations as $translation) {
                 $translationValue = (string) $translation->getElementsByTagName('translation')->item(0)->nodeValue;
 
-                if ($translationValue) {
+                if (!empty($translationValue)) {
                     $catalogue->set(
                         (string) $translation->getElementsByTagName('source')->item(0)->nodeValue,
                         $translationValue,
                         $domain
                     );
                 }
+                $translation = $translation->nextSibling;
             }
 
             if (class_exists(FileResource::class)) {
