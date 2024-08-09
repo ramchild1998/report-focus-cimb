@@ -58,6 +58,7 @@ $sheet->setCellValue('G1', 'ATM Monthly Visit');
 
 $selectedMonth = isset($_POST['month']) ? $_POST['month'] : Carbon::now()->format('m');
 $selectedYear = isset($_POST['year']) ? $_POST['year'] : Carbon::now()->year;
+$office = isset($_POST['office']) ? $_POST['office'] : '';
 $startDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth()->startOfDay()->format("Y-m-d H:i:s");
 $endDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->endOfMonth()->endOfDay()->format("Y-m-d H:i:s");
 $period = CarbonPeriod::create($startDate, $endDate);
@@ -77,8 +78,8 @@ $sqlScheduled = "SELECT
                   atm.wsid AS ATM_ID,
                   vendor.name AS Vendor,
                   location.name AS Location,
-                  user.name AS UserName,
                   agent_schedule.effective_date AS Start_Date,
+                  user.name AS UserName,
                   COUNT(schedule.id) AS visit_count
                 FROM 
                   focus_cimb.atm
@@ -94,6 +95,7 @@ $sqlScheduled = "SELECT
                   focus_cimb.user ON user.id = agent_schedule.agent_id
                 WHERE 
                   location.is_active = 1 AND
+                  location.office_id = $office AND
                   schedule.status = 'completed' AND
                   agent_schedule.effective_date BETWEEN '$startDate' AND '$endDate'
                 GROUP BY 
@@ -124,6 +126,8 @@ $sqlUnscheduled = "SELECT
                   LEFT JOIN 
                     focus_cimb.user ON user.id = unscheduled_visit.agent_id
                   WHERE 
+                    location.is_active = 1 AND
+                    location.office_id = $office AND
                     unscheduled_visit.status = 'completed' AND
                     unscheduled_visit.assigned_date BETWEEN '$startDate' AND '$endDate'
                   GROUP BY 

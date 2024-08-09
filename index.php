@@ -75,6 +75,7 @@ use Carbon\CarbonPeriod;
         <form action="exports.php" method="POST">
           <input type="hidden" name="month" id="exportMonth" value="<?php echo isset($selectedMonth) ? $selectedMonth : ''; ?>">
           <input type="hidden" name="year" id="exportYear" value="<?php echo isset($selectedYear) ? $selectedYear : ''; ?>">
+          <input type="hidden" name="office" id="exportOffice" value="<?php echo isset($selectedOffice) ? $selectedOffice : ''; ?>">
           <button type="submit" class="btn btn-success">Export to Excel</button>
         </form>
       </div>

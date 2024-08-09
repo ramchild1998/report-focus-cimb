@@ -72,8 +72,7 @@ $sqlScheduled = "SELECT
           atm.wsid ASC";
 
 // Query untuk data tidak terjadwal
-$sqlUnscheduled = "
-        SELECT 
+$sqlUnscheduled = "SELECT 
             atm.wsid AS ATM_ID,
             vendor.name AS Vendor,
             location.name AS Location,
