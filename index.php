@@ -127,6 +127,7 @@ use Carbon\CarbonPeriod;
           "data": function(d) {
             d.month = $('#monthpicker').val();
             d.year = $('#yearpicker').val();
+            d.office = $('#officepicker').val();
           }
         },
         "order": [[ $('th').length - 1, "asc" ]]

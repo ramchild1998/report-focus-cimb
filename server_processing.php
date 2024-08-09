@@ -32,6 +32,7 @@ $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
 
 $month = $_POST['month'] ?? Carbon::now()->format('m');
 $year = $_POST['year'] ?? Carbon::now()->year;
+$office = $_POST['office'] ?? 83;
 $start_month = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d H:i:s');
 $end_month = Carbon::createFromDate($year, $month, 1)->endOfMonth()->format('Y-m-d H:i:s');
 
@@ -58,6 +59,7 @@ $sqlScheduled = "SELECT
           focus_cimb.user ON user.id = agent_schedule.agent_id
         WHERE 
           location.is_active = 1 AND
+          location.office_id = $office AND
           schedule.status = 'completed' AND
           agent_schedule.effective_date BETWEEN '$start_month' AND '$end_month'
         GROUP BY 
@@ -92,6 +94,7 @@ $sqlUnscheduled = "
             focus_cimb.user ON user.id = unscheduled_visit.agent_id
         WHERE 
             location.is_active = 1 AND
+            location.office_id = $office AND
             unscheduled_visit.status = 'completed' AND
             unscheduled_visit.assigned_date BETWEEN '$start_month' AND '$end_month'
         GROUP BY 
