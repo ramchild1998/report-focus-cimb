@@ -60,6 +60,16 @@ use Carbon\CarbonPeriod;
             }
             ?>
           </select>
+          <select class="form-control ps-0 mb-1" name="office" id="officepicker" data-bs-toggle="tooltip" data-bs-title="Pilih kantor untuk laporan">
+            <?php
+            $offices = $conn->query("SELECT id, name FROM office WHERE is_active = 1");
+            $selectedOffice = isset($_GET['office']) ? $_GET['office'] : '';
+            while ($office = $offices->fetch_assoc()) {
+              $selected = ($office['id'] == $selectedOffice) ? 'selected' : '';
+              echo "<option value='{$office['id']}' $selected>{$office['name']}</option>";
+            }
+            ?>
+          </select>
           <button type="submit" class="btn btn-primary">Filter</button>
         </form>
         <form action="exports.php" method="POST">
