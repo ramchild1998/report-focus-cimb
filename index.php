@@ -121,6 +121,7 @@ use Carbon\CarbonPeriod;
       $('#laporanTable').DataTable({
         "processing": true,
         "serverSide": true,
+        "searching": false,
         "ajax": {
           "url": "server_processing.php",
           "type": "POST",
@@ -130,7 +131,7 @@ use Carbon\CarbonPeriod;
             d.office = $('#officepicker').val();
           }
         },
-        "order": [[ $('th').length - 1, "asc" ]]
+        "ordering": false
       });
     });
   </script>
